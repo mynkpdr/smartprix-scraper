@@ -1,0 +1,94 @@
+name: Daily Smartprix Scraper
+
+on:
+  schedule:
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+
+jobs:
+  run-mobiles:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas cloudscraper kaggle
+
+      - name: Run scraper for mobiles
+        env:
+          PRODUCT_TYPE: mobiles
+        run: python main.py
+
+      - name: Commit and push results (mobiles)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/mobiles/mobiles_progress.json data/mobiles/mobiles.csv
+          git commit -m "Auto commit mobiles at $(date -u)" || echo "No changes to commit"
+          git push
+
+      - name: Upload mobiles CSV to Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+          cd data/mobiles
+          # Create metadata
+          echo "{\"title\": \"Smartprix Mobiles Dataset\",\"id\": \"$KAGGLE_USERNAME/smartprix-mobiles-dataset\",\"licenses\": [{\"name\": \"MIT\"}]}" > dataset-metadata.json
+          kaggle datasets version -p . --quiet -m "Update mobiles dataset"
+          
+  run-laptops:
+    needs: run-mobiles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas cloudscraper kaggle
+
+      - name: Run scraper for laptops
+        env:
+          PRODUCT_TYPE: laptops
+        run: python main.py
+
+      - name: Commit and push results (laptops)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/laptops/laptops_progress.json data/laptops/laptops.csv
+          git commit -m "Auto commit laptops at $(date -u)" || echo "No changes to commit"
+          # Pull latest changes first to avoid rejected push
+          git pull --rebase origin main || echo "No changes to pull"
+          git push origin main
+
+      - name: Upload laptops CSV to Kaggle
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+        run: |
+          mkdir -p ~/.kaggle
+          echo "{\"username\":\"$KAGGLE_USERNAME\",\"key\":\"$KAGGLE_KEY\"}" > ~/.kaggle/kaggle.json
+          chmod 600 ~/.kaggle/kaggle.json
+          cd data/laptops
+          # Create metadata
+          echo "{\"title\": \"Smartprix Laptops Dataset\",\"id\": \"$KAGGLE_USERNAME/smartprix-laptops-dataset\",\"licenses\": [{\"name\": \"MIT\"}]}" > dataset-metadata.json
+          kaggle datasets version -p . --quiet -m "Update laptops dataset"
