@@ -2,7 +2,7 @@ name: Daily Smartprix Scraper
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 5 */15 * *"
   workflow_dispatch:
 
 jobs:
@@ -92,3 +92,4 @@ jobs:
           # Create metadata
           echo "{\"title\": \"Smartprix Laptops Dataset\",\"id\": \"$KAGGLE_USERNAME/smartprix-laptops-dataset\",\"licenses\": [{\"name\": \"MIT\"}]}" > dataset-metadata.json
           kaggle datasets version -p . --quiet -m "Update laptops dataset"
+
